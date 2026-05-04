@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hospital Transaction System</title>
+
+<!-- GSAP -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+<!-- SheetJS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<style>
+body {
+    font-family: Arial;
+    margin: 0;
+    background: #f4f7fb;
+}
+
+/* Navbar */
+.navbar {
+    background: #0b5ed7;
+    color: white;
+    padding: 10px;
+    font-size: 18px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+}
+
+.navbar img{
+    height: 40px;
+    margin-right: 10px;
+}
+
+/* Container */
+.container {
+    padding: 10px;
+}
+
+/* Table Wrapper (IMPORTANT) */
+.table-wrapper {
+    overflow-x: auto;
+}
+
+/* Table */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    min-width: 900px; /* force scroll on mobile */
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 6px;
+    text-align: center;
+    font-size: 14px;
+}
+
+th {
+    background: #0b5ed7;
+    color: white;
+}
+
+input {
+    width: 100%;
+    border: none;
+    outline: none;
+    text-align: center;
+    font-size: 13px;
+}
+
+/* Buttons */
+button {
+    margin: 5px 5px 5px 0;
+    padding: 8px 12px;
+    border: none;
+    background: #198754;
+    color: white;
+    cursor: pointer;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.delete-btn {
+    background: red;
+}
+
+/* Button container */
+.btn-group {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+/* Total */
+.total-box {
+    margin-top: 10px;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+/* 📱 Mobile Fix */
+@media (max-width: 600px) {
+
+    .navbar {
+        font-size: 14px;
+    }
+
+    .navbar img {
+        height: 30px;
+    }
+
+    th, td {
+        font-size: 12px;
+        padding: 4px;
+    }
+
+    input {
+        font-size: 12px;
+    }
+
+    button {
+        font-size: 12px;
+        padding: 6px 8px;
+    }
+
+    .total-box {
+        font-size: 14px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="navbar">
+    <img src="img/logo.png" alt="">
+    APEX Hospital Transaction System
+</div>
+
+<div class="container">
+
+<div class="table-wrapper">
+<table id="dataTable">
+<thead>
+<tr>
+<th>Sr.No</th>
+<th>Cheque/RTGS No</th>
+<th>Sender A/C</th>
+<th>Amount</th>
+<th>Beneficiary A/C</th>
+<th>Name</th>
+<th>IFSC</th>
+<th>LEI</th>
+<th>Remarks</th>
+<th>Action</th>
+</tr>
+</thead>
+
+<tbody>
+<tr>
+<td>1</td>
+<td><input type="text"></td>
+<td><input type="text"></td>
+<td><input type="text" class="amount"></td>
+<td><input type="text"></td>
+<td><input type="text"></td>
+<td><input type="text"></td>
+<td><input type="text"></td>
+<td><input type="text"></td>
+<td><button class="delete-btn" onclick="deleteRow(this)">🗑</button></td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<div class="btn-group">
+<button onclick="addRow()">➕ Add Row</button>
+<button onclick="downloadExcel()">⬇ Download Excel</button>
+</div>
+
+<div class="total-box">Total: ₹ <span id="total">0</span></div>
+
+</div>
+
+<script>
+
+// Add Row
+function addRow() {
+    let table = document.querySelector("#dataTable tbody");
+    let rowCount = table.rows.length + 1;
+    let row = table.insertRow();
+
+    for (let i = 0; i < 10; i++) {
+        let cell = row.insertCell(i);
+
+        if (i === 0) {
+            cell.innerHTML = rowCount;
+        } 
+        else if (i === 3) {
+            cell.innerHTML = '<input type="text" class="amount">';
+        } 
+        else if (i === 9) {
+            cell.innerHTML = '<button class="delete-btn" onclick="deleteRow(this)">🗑</button>';
+        }
+        else {
+            cell.innerHTML = '<input type="text">';
+        }
+    }
+
+    updateListeners();
+}
+
+// Delete Row
+function deleteRow(btn) {
+    let row = btn.parentNode.parentNode;
+    row.remove();
+    updateSerialNumbers();
+    updateTotal();
+}
+
+// Update Sr.No
+function updateSerialNumbers() {
+    let rows = document.querySelectorAll("#dataTable tbody tr");
+    rows.forEach((row, index) => {
+        row.cells[0].innerText = index + 1;
+    });
+}
+
+// Total
+function updateTotal() {
+    let amounts = document.querySelectorAll(".amount");
+    let total = 0;
+
+    amounts.forEach(input => {
+        let val = input.value.replace(/,/g,'');
+        total += parseFloat(val) || 0;
+    });
+
+    document.getElementById("total").innerText = total;
+}
+
+// Listener
+function updateListeners() {
+    document.querySelectorAll(".amount").forEach(input => {
+        input.removeEventListener("input", updateTotal);
+        input.addEventListener("input", updateTotal);
+    });
+}
+
+updateListeners();
+
+// Excel Download (same)
+function downloadExcel() {
+
+    let data = [];
+
+    data.push([
+        "Sr.No","Cheque/RTGS No","Sender A/C","Amount",
+        "Beneficiary A/C","Name","IFSC","LEI","Remarks"
+    ]);
+
+    let rows = document.querySelectorAll("#dataTable tbody tr");
+    let total = 0;
+
+    rows.forEach((tr, index) => {
+        let rowData = [];
+        let inputs = tr.querySelectorAll("input");
+
+        rowData.push(index + 1);
+
+        inputs.forEach((input, i) => {
+            let val = input.value;
+
+            if (i === 2) {
+                total += parseFloat(val.replace(/,/g,'')) || 0;
+            }
+
+            rowData.push(val);
+        });
+
+        data.push(rowData);
+    });
+
+    data.push(["", "", "TOTAL", total, "", "", "", "", ""]);
+
+    let ws = XLSX.utils.aoa_to_sheet(data);
+
+    ws['!cols'] = [
+        { wch: 6 },
+        { wch: 18 },
+        { wch: 20 },
+        { wch: 12 },
+        { wch: 20 },
+        { wch: 20 },
+        { wch: 12 },
+        { wch: 12 },
+        { wch: 25 }
+    ];
+
+    let wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Hospital Data");
+
+    XLSX.writeFile(wb, "Hospital_Data.xlsx");
+}
+
+// GSAP
+gsap.from(".navbar", { y: -50, opacity: 0, duration: 1 });
+gsap.from("table", { opacity: 0, duration: 1, delay: 0.5 });
+gsap.from("button", { scale: 0.8, opacity: 0, duration: 0.5, stagger: 0.2 });
+
+</script>
+
+</body>
+</html>
